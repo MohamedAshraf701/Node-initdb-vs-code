@@ -2,7 +2,7 @@
   "name": "node-initdb",
   "displayName": "node-initdb",
   "description": "node-initdb is a Vs Code Extension for initializing database configurations and structures in Node.js projects.",
-  "version": "0.0.6",
+  "version": "0.0.9",
   "publisher": "MohamedAshraf",
   "icon": "Logo.png",
   "engines": {
@@ -15,17 +15,14 @@
   "repository": {
     "url": "https://github.com/MohamedAshraf701/Node-initdb-vs-code.git"
   },
-  "activationEvents": [],
+  "activationEvents": [
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "node-initdb.setupDatabase",
         "title": "Node-initdb : Setup Project"
-      },
-      {
-        "command": "node-initdb.addModule",
-        "title": "Node-initdb : Add Module"
       }
     ]
   },

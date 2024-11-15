@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import main from './main';
-import moduleMain from './module';
 
 export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('node-initdb.setupDatabase', async () => {
@@ -65,40 +64,40 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 
      // Register "addModule" command
-     let addModuleCommand = vscode.commands.registerCommand('node-initdb.addModule', async () => {
-        const moduleName = await vscode.window.showInputBox({
-            prompt: 'Enter the module name',
-            placeHolder: 'Enter the name of the module you want to add'
-        });
+    //  let addModuleCommand = vscode.commands.registerCommand('node-initdb.addModule', async () => {
+    //     const moduleName = await vscode.window.showInputBox({
+    //         prompt: 'Enter the module name',
+    //         placeHolder: 'Enter the name of the module you want to add'
+    //     });
 
-        if (!moduleName) {
-            vscode.window.showErrorMessage('Module name cannot be empty!');
-            return;
-        }else {
-            const invalidChars = /[<>:"\/\\|?*\x00-\x1F]/;
-            // Check for invalid characters
-            if (invalidChars.test(moduleName)) {
-                vscode.window.showErrorMessage("String contains invalid characters for a filename");
-                return;
-            }
-        }
-        const databaseChoice = await vscode.window.showQuickPick(
-            ['Mongoose', 'Sequelize'],
-            {
-                placeHolder: 'Select the database you want to use',
-            }
-        );
+    //     if (!moduleName) {
+    //         vscode.window.showErrorMessage('Module name cannot be empty!');
+    //         return;
+    //     }else {
+    //         const invalidChars = /[<>:"\/\\|?*\x00-\x1F]/;
+    //         // Check for invalid characters
+    //         if (invalidChars.test(moduleName)) {
+    //             vscode.window.showErrorMessage("String contains invalid characters for a filename");
+    //             return;
+    //         }
+    //     }
+    //     const databaseChoice = await vscode.window.showQuickPick(
+    //         ['Mongoose', 'Sequelize'],
+    //         {
+    //             placeHolder: 'Select the database you want to use',
+    //         }
+    //     );
 
-        if (!databaseChoice) {
-            vscode.window.showErrorMessage('You must select a database type!');
-            return;
-        }
-        const capitalizedStr = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
-        let data =moduleMain(capitalizedStr , databaseChoice == "Sequelize" ? true : false);
-        vscode.window.showInformationMessage(data);
-    });
+    //     if (!databaseChoice) {
+    //         vscode.window.showErrorMessage('You must select a database type!');
+    //         return;
+    //     }
+    //     const capitalizedStr = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+    //     let data =moduleMain(capitalizedStr , databaseChoice == "Sequelize" ? true : false);
+    //     vscode.window.showInformationMessage(data);
+    // });
 
-    context.subscriptions.push(addModuleCommand);
+    // context.subscriptions.push(addModuleCommand);
 }
 
 export function deactivate() { }
