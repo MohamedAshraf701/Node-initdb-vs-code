@@ -1,104 +1,98 @@
-# node-initdb
+# **Node-initdb**  
+![Logo](Logo.png)
 
-node-initdb is a CLI tool for initializing database configurations and structures in Node.js projects.
+**Node-initdb** is a Visual Studio Code extension designed to simplify the process of initializing database configurations and structures in Node.js projects. With support for both Mongoose and Sequelize, this extension streamlines the setup of database connections and modules, saving developers valuable time.
 
-![Node InitDB Plugin Demo](https://github.com/MohamedAshraf701/node-cli/blob/main/example.gif)
+---
 
-## Installation
+## **Features**
 
-You can install node-initdb globally using npm:
+### 1. **Setup Project**
+Easily set up your Node.js project with essential configurations and a database connection.  
+- Prompt-based project initialization.  
+- Supports both **Mongoose** (MongoDB) and **Sequelize** (SQL databases).  
+- Automatically generates the required files and configurations.
 
-```bash
-npm install -g node-initdb
-```
+### 2. **Add Module**
+Quickly add new modules to your project with just a few inputs.  
+- Supports Mongoose and Sequelize models.  
+- Automatically creates routes and registers them.  
+- Copies the route registration snippet to your clipboard for quick integration.
 
-## Usage
+---
 
-To use node-initdb, navigate to your project directory and run one of the following commands based on your database choice:
+## **Installation**
+1. Open **Visual Studio Code**.  
+2. Go to the **Extensions View** (`Ctrl+Shift+X` or `Cmd+Shift+X` on macOS).  
+3. Search for `Node-initdb`.  
+4. Click **Install**.
 
--	`-m`/`--mongo`: Add MongoDB configuration and files for the module.
--	`-s`/`--seque`: Add Sequelize configuration and files for the module.
--	`-y`/`--yes`: Skip interactive prompts and use default values for module creation.
+---
 
-### Initialize Sequelize Structure
+## **Usage**
 
-To set up Sequelize with default folders, files, and install necessary packages:
+### **1. Setting Up the Project**
+1. Open a workspace in VS Code.  
+2. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS).  
+3. Type `Node-initdb : Setup Project` and select the command.  
+4. Follow the prompts to enter details such as package name, version, description, and database type (Mongoose or Sequelize).  
+5. The extension will initialize the project and create necessary configurations.
 
-```bash
-node-initdb --seque
-```
+### **2. Adding a Module**
+1. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS).  
+2. Type `Node-initdb : Add Module` and select the command.  
+3. Enter the module name when prompted.  
+4. Choose the database type (Mongoose or Sequelize).  
+5. The extension generates the module files and copies the route registration snippet to your clipboard.
 
-```bash
-node-initdb -s
-```
+---
 
-### Initialize MongoDB Structure
+## **Commands**
+| Command                        | Description                                          |  
+|--------------------------------|------------------------------------------------------|  
+| `Node-initdb : Setup Project`  | Sets up the project with database configuration.     |  
+| `Node-initdb : Add Module`     | Adds a new module and generates route files.         |  
 
-To set up MongoDB with default folders, files, and install necessary packages:
+---
 
-```bash
-node-initdb --mongo 
-```
+## **Key Features**
 
-```bash
-node-initdb -m
-```
+### **Database Support**  
+- **Mongoose** for MongoDB.  
+- **Sequelize** for SQL databases (MySQL, PostgreSQL, etc.).  
 
-### Add Module Task
+### **Route Registration**  
+- Automatically registers routes for added modules.  
+- Provides a ready-to-use route snippet for quick integration.
 
-To add a new module using `node-add`, run the following command:
+### **Customizable Prompts**  
+- Default values for commonly used configurations.  
+- Skip fields to use defaults.
 
-```bash
-node-add <moduleName> [-m / --mongo] [-s / --seque]
-```
+---
 
-Replace `<moduleName>` with the name of your module. Use the following optional flags:
+## **Contributing**
+Contributions are welcome!  
+1. Fork the repository: [GitHub Repository](https://github.com/MohamedAshraf701/Node-initdb-vs-code).  
+2. Create a feature branch: `git checkout -b feature-name`.  
+3. Commit changes: `git commit -m "Add feature"`.  
+4. Push to the branch: `git push origin feature-name`.  
+5. Submit a pull request.
 
-### Example
+---
 
-```bash
-node-add "user" -m
-```
+## **Issues**
+If you encounter any issues, please report them [here](https://github.com/MohamedAshraf701/Node-initdb-vs-code/issues).
 
-## Folder Structure
+---
 
-After running the command, node-initdb will create the following folder structure:
+## **License**
+This extension is licensed under the [MIT License](LICENSE).  
 
-```
-- config/
-- Controllers/
-- Routes/
-- Models/
-- uploads/
-- Utils/
-```
+---
 
-## Files Created
+## **Author**
+**Mohamed Ashraf**  
+- GitHub: [MohamedAshraf701](https://github.com/MohamedAshraf701)  
+- Portfolio: [ashraf.digital](https://ashraf.digital)
 
-node-initdb creates essential files such as controller, route, model files, and configuration files necessary for setting up your chosen database.
-
-## Dependencies
-
-node-initdb installs the following dependencies based on your database setup:
-
-- For Sequelize: `sequelize`, `mysql2`
-- For MongoDB: `mongoose`
-- Middleware and Utilities: `express`, `body-parser`, `cors`, `dotenv`, `fs`, `http-errors`, `https`, `jsonwebtoken`, `multer`
-
-## Contributing
-
-Contributions are welcome! Fork the repository, make your changes, and submit a pull request. Please follow the existing coding style and guidelines.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Get in touch
-
-If you have any questions, feel free to reach out:
-
-- Email: ashrafchauhan567@gmail.com
-- GitHub: [@MohamedAshraf701](https://github.com/MohamedAshraf701)
-
-# Support
-<p><a href="https://www.buymeacoffee.com/ashraf704"> <img align="left" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" width="210" alt="ashraf704" /></a></p><br><br>

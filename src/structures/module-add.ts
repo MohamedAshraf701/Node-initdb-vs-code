@@ -1,4 +1,4 @@
-const module= {
+const addModule= {
     folders: ['Controllers', 'Routes', 'Models'],
     mfiles:(name:any) =>{
         return [{folder: 'Models', name: `${name}.Model.js`, content:
@@ -480,4 +480,4 @@ module.exports = router;
     }
 
 }
-export default module;
+export default addModule;
