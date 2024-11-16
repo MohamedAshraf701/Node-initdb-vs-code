@@ -1,5 +1,5 @@
 # **Node-initdb**  
-![Logo](Logo.png)
+![Logo](Vs-Extension-ezgif.com-video-to-gif-converter.gif)
 
 **Node-initdb** is a Visual Studio Code extension designed to simplify the process of initializing database configurations and structures in Node.js projects. With support for both Mongoose and Sequelize, this extension streamlines the setup of database connections and modules, saving developers valuable time.
 
