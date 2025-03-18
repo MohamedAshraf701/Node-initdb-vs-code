@@ -1,6 +1,6 @@
 const mongo = {
-    folders: ['config','Controllers', 'Routes', 'Models', 'uploads', 'Utils'],
-    files:(index:any) =>{return  [
+    folders: ['config','Controllers', 'Routes', 'Models', 'uploads', 'Middleware' , 'Utils'],
+    files:(index: any, Projectname: any) =>{return  [
         {
             folder: 'Controllers',
             name: 'health.Controller.js',
@@ -12,38 +12,51 @@ const mongo = {
   const ResponseHandler = require("../Utils/responseHandler");
   
   module.exports = {
-      // Health check endpoint
-      Health: (req, res, next) => {
-          try {
-              // Attempt to send a success response indicating the health status
-              ResponseHandler.sendSuccess(res, "health Status", Codes.OK, Messages.OK);
-              return;
-          } catch (error) {
-              // Handle any errors that occur during the process by sending an error response
-              ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-              next(error); // Pass the error to the next middleware for further handling
-          }
+    // Health check endpoint
+    Health: async (req, res, done) => {
+      try {
+        // Attempt to send a success response indicating the health status
+        ResponseHandler.sendSuccess(res, "Health Okay!", Codes.OK, Messages.OK);
+        return;
+      } catch (error) {
+        // Handle any errors that occur during the process by sending an error response
+        ResponseHandler.sendError(
+          res,
+          error,
+          Codes.INTERNAL_SERVER_ERROR,
+          Messages.INTERNAL_SERVER_ERROR
+        );
+        return;
       }
-  }
+    },
+  };
+
                 ` },
         {
             folder: 'Routes',
             name: 'health.Route.js',
             content:
                 `
-// Importing the express module to create router instances and handle the routing
-const express = require("express");
-// Creating a router instance from express to define route handlers
-const router = express.Router();
+/**
+ * This module exports a function that defines routes for health checks.
+ * It imports the HealthController and sets up a GET route for the health check endpoint.
+ */
 
-// Importing the HealthController from the Controllers directory
-const HealthController = require("../Controllers/health.Controller")
+const HealthController = require("../Controllers/health.Controller");
 
-// Defining a GET route on the root path which uses the Health method from HealthController to handle requests
-router.get("/" ,HealthController.Health);
+/**
+ * This function is used to define routes for the Fastify server.
+ * It sets up a GET route for the health check endpoint.
+ * 
+ * @param {Fastify} fastify - The Fastify server instance.
+ * @param {Object} options - Options for the route.
+ */
+async function routes(fastify, options) {
+    fastify.get("/", HealthController.Health);
+}
 
-// Exporting the router instance to be used in other parts of the application
-module.exports = router;
+module.exports = routes;
+
                 ` },
         {
             folder: 'Models',
@@ -358,99 +371,123 @@ module.exports = {
             `
         },
         {
-            folder : 'Utils', name : 'jwtToken.js', content :
+            folder : 'Middleware', name : 'jwtToken.js', content :
             `'use strict'
 // jwtHelper.js
-const jwt = require('jsonwebtoken');
-const ResponseHandler = require('./responseHandler');
-const { Codes, Messages } = require('./httpCodesAndMessages');
-
-// Secret key for signing tokens
-const SECRET_KEY = process.env.JWT_SECRET || 'X~7W@**TsZ=@}XT/"Z<bo7oDY8gtD(';
-
-class JWTHelper {
-    /**
-     * Create a new JWT token
-     * @param {Object} payload - The payload to include in the token
-     * @param {Object} options - Options for token creation, such as 'expiresIn'
-     * @returns {String} - The created JWT token
-     */
-    static createToken(payload, options = {}) {
-        const tokenOptions = {};
-        if (options.expiresIn) {
-            tokenOptions.expiresIn = options.expiresIn;
-        }
-        return jwt.sign(payload, SECRET_KEY, tokenOptions);
+/**
+ * Creates a JWT token based on the provided payload.
+ * 
+ * @param {Request} req - The Fastify request object.
+ * @param {Object} payload - The payload to be signed into the token.
+ * @returns {Promise<string>} A promise that resolves to the created token.
+ */
+const createToken = async (req, payload) => {
+    try {
+        const token = await req.server.jwt.sign(payload);
+        return token;
+    } catch (error) {
+        throw new Error('Error creating token: ' + error.message);
     }
+};
 
-    /**
-     * Validate a JWT token
-     * @param {String} token - The token to validate
-     * @returns {Object} - The decoded token if valid, or an error if invalid
-     */
-    static validateToken(token) {
-        try {
-            const decoded = jwt.verify(token, SECRET_KEY);
-            return { valid: true, decoded };
-        } catch (error) {
-            if (error.name === 'TokenExpiredError') {
-                return { valid: false, error: 'Token has expired' };
-            }
-            return { valid: false, error: error.message };
-        }
+/**
+ * Verifies a JWT token and returns its decoded payload.
+ * 
+ * @param {Request} req - The Fastify request object.
+ * @param {string} token - The token to be verified.
+ * @returns {Promise<Object>} A promise that resolves to the decoded token payload.
+ */
+const verifyToken = async (req, token) => {
+    try {
+        const decoded = await req.server.jwt.verify(token);
+        return decoded;
+    } catch (error) {
+        throw new Error('Error verifying token: ' + error.message);
     }
+};
 
-    /**
-     * Middleware to validate JWT token in requests
-     * @param {Object} req - The request object
-     * @param {Object} res - The response object
-     * @param {Function} next - The next middleware function
-     */
-    static tokenMiddleware(req, res, next) {
-        const token = req.headers['authorization']?.split(' ')[1];
-        if (!token) {
-            return ResponseHandler.sendError(res, 'No token provided', Codes.UNAUTHORIZED, Messages.UNAUTHORIZED);
-        }
-
-        const { valid, decoded, error } = JWTHelper.validateToken(token);
-        if (valid) {
-            req.user = decoded; // Attach the decoded payload to the request object
-            next();
-        } else {
-            if (error === 'Token has expired') {
-                return ResponseHandler.sendError(res, 'Token has expired', Codes.UNAUTHORIZED, Messages.UNAUTHORIZED);
-            }
-            return ResponseHandler.sendError(res, 'Invalid token', Codes.UNAUTHORIZED, Messages.UNAUTHORIZED);
-        }
+/**
+ * Middleware function for JWT authentication.
+ * 
+ * @param {Request} req - The Fastify request object.
+ * @param {Reply} reply - The Fastify reply object.
+ */
+const authenticateMiddleware = async (req, reply) => {
+    try {
+        await req.jwtVerify();
+    } catch (err) {
+        reply.status(401).send({ error: "Unauthorized" });
     }
-}
+};
 
-module.exports = JWTHelper;
+module.exports = {
+    createToken,
+    verifyToken,
+    authenticateMiddleware
+};
             
             `
         },
         {
             folder: 'Utils', name: 'responseHandler.js', content:
                 `
-const { Codes, Messages } = require('./httpCodesAndMessages');
-class ResponseHandler {
-    static sendSuccess(res, data, statusCode = Codes.OK , message = Messages.OK) {
-        res.status(statusCode).json({
-            success: true,
-            status: statusCode,
-            message: message,
-            data: data,
-        });
-    }
+/**
+ * This module provides a utility class for handling HTTP responses in a standardized way.
+ * It includes methods for sending success and error responses with customizable status codes and messages.
+ * 
+ * @module ResponseHandler
+ */
 
-    static sendError(res, error, statusCode = Codes.INTERNAL_SERVER_ERROR , message = Messages.INTERNAL_SERVER_ERROR) {
-        res.status(statusCode).json({
-            success: false,
-            status: statusCode,
-            message: message,
-            error: error.message || error,
-        });
-    }
+const { Codes, Messages } = require("./httpCodesAndMessages");
+
+/**
+ * Represents a utility class for handling HTTP responses.
+ * 
+ * @class ResponseHandler
+ */
+class ResponseHandler {
+    /**
+     * Sends a successful HTTP response.
+     * 
+     * @param {Response} res - The Express response object.
+     * @param {*} data - The data to be sent in the response.
+     * @param {number} [statusCode=Codes.OK] - The HTTP status code for the response.
+     * @param {string} [message=Messages.OK] - The message to be sent in the response.
+     */
+  static sendSuccess(res, data, statusCode = Codes.OK, message = Messages.OK) {
+    if(res.sent) return;
+
+    return res.code(statusCode).send({
+      success: true,
+      status: statusCode,
+      message: message,
+      data: data,
+    });
+  }
+
+   /**
+     * Sends an error HTTP response.
+     * 
+     * @param {Response} res - The Express response object.
+     * @param {*} error - The error to be sent in the response.
+     * @param {number} [statusCode=Codes.INTERNAL_SERVER_ERROR] - The HTTP status code for the response.
+     * @param {string} [message=Messages.INTERNAL_SERVER_ERROR] - The message to be sent in the response.
+     */
+  static sendError(
+    res,
+    error,
+    statusCode = Codes.INTERNAL_SERVER_ERROR,
+    message = Messages.INTERNAL_SERVER_ERROR
+  ) {
+    if(res.sent) return;
+  
+    res.code(statusCode).send({
+      success: false,
+      status: statusCode,
+      message: message,
+      error: error.message || error,
+    });
+  }
 }
 
 module.exports = ResponseHandler;
@@ -459,77 +496,93 @@ module.exports = ResponseHandler;
         {
             folder: '', name: index, content:
                 `
-const express = require("express"); // Importing express module for server operations
-const createError = require("http-errors"); // Importing module to create HTTP errors
-const dotenv = require("dotenv").config(); // Loading environment variables from .env file
-const cors = require('cors'); // Importing CORS middleware to enable cross-origin requests
-const bodyParser = require("body-parser"); // Importing body-parser middleware to parse request bodies
-const app = express(); // Creating an instance of express
+/**
+ * Initializes the Fastify server with logging enabled.
+ * Loads environment variables from a .env file.
+ * Registers necessary plugins for CORS, form body parsing, JWT authentication, multipart file uploads, and static file serving.
+ * Sets up a custom authentication decorator for JWT verification.
+ * Configures the database connection.
+ * Registers routes for health checks and sets up error handlers for not found and general errors.
+ * Starts the server on a specified port, using HTTPS if enabled.
+ */
+const fastify = require('fastify')({ logger: true }); 
+const dotenv = require("dotenv").config();
+const fs = require('fs');
 
-const fs = require('fs'); // Importing file system module for file operations
-app.use(cors()); // Using CORS middleware in the app
-app.use(express.json()); // Middleware to parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
-app.use(bodyParser.json()); // Middleware to parse JSON bodies using body-parser
+// Import JWT functions
+const {  authenticateMiddleware } = require('./Middleware/jwtToken');
 
-const apiV1Router = express.Router(); // Creating a new router for API version 1
+// Registering plugins for CORS, form body parsing, JWT authentication, multipart file uploads, and static file serving
+fastify.register(require('@fastify/cors'));
+fastify.register(require('@fastify/formbody'));
+fastify.register(require("@fastify/multipart"));
 
-// Initialize DB
-require("./config/dbConfig")(); // Importing and executing the database configuration
-
-// Middleware to log request details after response is sent
-app.use((req, res, next) => {
-  res.on("finish", () => {
-      console.log(req.method + " - " + req.originalUrl + " - " + res.statusCode);
-  });
-  next();
+fastify.register(require('@fastify/jwt'), {
+    secret: process.env.JWT_SECRET || 'X~7W@**TsZ=@}XT/"Z<bo7oDY8gtD('
 });
 
-apiV1Router.use('/uploads', express.static('uploads')); // Serving static files from 'uploads' directory
+// Custom decorator for JWT authentication
+fastify.decorate("authenticate", authenticateMiddleware);
 
-// Importing route for health checks
+// Configuring database connection
+require("./config/dbConfig")();
+
+// Registering routes for static file serving
+fastify.register(require('@fastify/static'), {
+  root: __dirname + '/uploads',
+  prefix: '/api/v1/uploads/'
+});
+
+// Registering routes for health checks
 const RoutesHealth = require("./Routes/health.Route");
+fastify.register(RoutesHealth ,{prefix : "/api/v1/health"});
 
-// Registering health check route with API v1 router
-apiV1Router.use("/health", RoutesHealth);
-
-// Middleware to handle 404 Not Found error for API v1 routes
-apiV1Router.use((req, res, next) => {
-    next(createError(404, "Not found"));
+// Setting up error handler for not found routes
+fastify.setNotFoundHandler((request, reply) => {
+  reply.code(404).send({
+    error: {
+      status: 404,
+      message: "Not found"
+    }
+  });
 });
 
-// Custom error handler middleware for API v1 routes
-apiV1Router.use((err, req, res, next) => {
-    res.status(err.status || 500); // Setting the response status code
-    res.send({
-        error: {
-            status: err.status || 500, // Error status code
-            message: err.message, // Error message
-        },
-    });
+// Setting up general error handler
+fastify.setErrorHandler((error, request, reply) => {
+  reply.code(error.statusCode || 500).send({
+    error: {
+      status: error.statusCode || 500,
+      message: error.message
+    }
+  });
 });
 
-app.use("/api/v1" , apiV1Router); // Mounting API v1 router at '/api/v1'
+// Setting up server port
+const PORT = process.env.PORT || 8096;
 
-const http = require("https"); // Importing HTTPS module
-const PORT = process.env.PORT || 8096; // Setting port from environment variable or default to 8096
-// Check if HTTPS is enabled via environment variable
-if (process.env.IS_HTTPS == "true") {
-    const privateKey = fs.readFileSync(process.env.KEYPATH, 'utf8'); // Reading private key for HTTPS
-    const certificate = fs.readFileSync(process.env.CARTPATH, 'utf8'); // Reading certificate for HTTPS
-    const credentials = { key: privateKey, cert: certificate }; // Creating credentials object
-    
-    // Creating and starting HTTPS server
-    let server = http.createServer(credentials, app);
-    server.listen(PORT, () => {
-        console.log('HTTPS Server started on port :' ,PORT);
-    });
-} else {
-    // Starting HTTP server if HTTPS is not enabled
-    app.listen(PORT, () => {
-        console.log('HTTP Server started on port :' ,PORT);
-    });
-}
+// Function to start the server
+const startServer = async () => {
+  try {
+    // Determining if HTTPS should be used
+    if (process.env.IS_HTTPS == "true") {
+      fastify.server.cert = fs.readFileSync(process.env.CARTPATH);
+      fastify.server.key = fs.readFileSync(process.env.KEYPATH);
+      
+      await fastify.listen({ port: PORT });
+      console.log('HTTPS Server started on port:', PORT);
+    } else {
+      await fastify.listen({ port: PORT });
+      console.log('HTTP Server started on port:', PORT);
+    }
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+// Starting the server
+startServer();
+
                 ` },
         {
             folder: 'config', name: 'dbConfig.js',
@@ -581,8 +634,63 @@ module.exports = () => {
 };
                 ` },
         {
-            folder: '', name: '.env', content:
-                `PORT=3000
+            folder: 'Middleware', name: 'fileUpload.js',
+            content:
+                `
+/**
+ * This module exports a middleware function for handling file uploads.
+ * It uses the 'fs' and 'path' modules to write the uploaded file to a directory.
+ * The middleware function is designed to work with Fastify and its multipart plugin.
+ * It handles file uploads by writing the file to a specified directory and storing
+ * the file details in the request object.
+ */
+
+const fs = require("fs");
+const path = require("path");
+
+/**
+ * The uploadMiddleware function handles file uploads.
+ * It attempts to read the file from the request, writes it to a directory,
+ * and stores the file details in the request object.
+ * 
+ * @param {NextFunction} req - The Fastify request object.
+ * @param {Reply} reply - The Fastify reply object.
+ */
+const uploadMiddleware = async (req, reply) => {
+    try {
+        //postman key name should be 'file'
+        const data = await req.file();
+        if (!data) {
+            return reply.status(400).send({ error: "No file uploaded" });
+        }
+        const uniqueFilename = Date.now() +'_'+data.filename;
+
+        // Define the file upload path
+        const uploadDir = path.join(__dirname, '..', 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true }); // Create uploads folder if not exists
+        }
+    
+        const filePath = path.join(uploadDir, uniqueFilename);
+    
+        await fs.promises.writeFile(filePath, await data.toBuffer());
+       
+        req.uploadedFile = {
+            filename: data.filename,
+            mimetype: data.mimetype,
+            size: data.file.size
+        };
+
+    } catch (err) {
+        reply.status(500).send({ error: "File upload failed", details: err.message });
+    }
+};
+
+module.exports = uploadMiddleware;                
+                ` },
+                {
+                  folder: '', name: '.env', content:
+                    `PORT=3000
 MONGODB_URI=mongodb://localhost:27017/
 DB_NAME=test
 DB_USER=
@@ -590,8 +698,103 @@ DB_PASS=
 IS_HTTPS=false
 KEYPATH=
 CARTPATH=
-JWT_SECRET=` } // Empty .env file
-    ]},
-    cmd : 'npm install body-parser cors dotenv express fs http-errors https jsonwebtoken mongoose multer'
-}
-export default mongo
+JWT_SECRET=` } ,
+{
+  folder: '', name: '.gitignore', content:
+      `node_modules
+package-lock.json
+.env
+` 
+} ,
+      {
+        folder: '', name: 'README.md', content:
+            `
+# *${Projectname}*
+
+This project was generated using node-initdb, a CLI tool for initializing database configurations, web framework setups, and project structures in Node.js projects. *This setup requires you to choose one option from each category: a database, a web framework, a language, and a package manager.*
+
+## Features
+
+- Preconfigured folder structure for streamlined project development.
+- *Database Support:* Choose between MongoDB (via Mongoose) or Sequelize (MySQL).
+- *Web Framework:* Set up with Express, Fastify, or Elysia.
+- *Language Choice:* Develop in JavaScript or TypeScript.
+- *Package Manager:* Use npm, yarn, pnpm, or bun.
+- Integrated file upload functionality.
+- Pre-configured JWT-based authentication.
+- Automatically installs required dependencies based on your selected configuration.
+
+## Folder Structure
+
+The following structure was generated:
+
+
+- config/
+- Controllers/
+- Routes/
+- Models/
+- Middleware/
+- uploads/
+- Utils/
+
+
+## Getting Started
+
+### Setup Project
+
+Use the 'node-initdb' command to create the project. *You must select one option from each category:*
+
+- *Database:*
+  - MongoDB: '-m' or '--mongo'
+  - Sequelize: '-s' or '--seque'
+- *Web Framework:*
+  - Express: '-e' or '--express'
+  - Fastify: '-f' or '--fastify'
+  - Elysia: '-el' or '--elysia'
+- *Language:*
+  - JavaScript: '-j' or '--javascript'
+  - TypeScript: '-t' or '--typescript'
+- *Package Manager:*
+  - npm: '-n' or '--npm'
+  - yarn: '-ya' or '--yarn'
+  - pnpm: '-pn' or '--pnpm'
+  - bun: '-b' or '--bun'
+
+Optionally, add '-y' or '--yes' to skip interactive prompts and use default values.
+
+For example, to set up a project with MongoDB, Express, TypeScript, and npm:
+
+bash
+node-initdb -m -e -t -n
+
+
+### Adding a Module
+
+To add a new module to your project, use the 'node-add' command with the same required options:
+
+bash
+node-add <moduleName> [-m / --mongo] [-s / --seque] [-e / --express] [-f / --fastify] [-el / --elysia] [-j / --javascript] [-t / --typescript] [-n / --npm] [-ya / --yarn] [-pn / --pnpm] [-b / --bun]
+
+
+For example, to add a "user" module for MongoDB, Express, TypeScript, and yarn:
+
+bash
+node-add user -m -e -t
+
+
+## About node-initdb
+
+node-initdb is designed to simplify the setup of database-driven projects by generating a preconfigured folder structure and installing required dependencies based on your chosen database, web framework, language, and package manager.
+
+For more information, visit:
+- GitHub: [@MohamedAshraf701](https://github.com/MohamedAshraf701)
+
+---
+
+If you encounter any issues, feel free to reach out at ashrafchauhan567@gmail.com or open an issue on GitHub.
+            ` } // Empty .env file
+    ];
+  },
+    cmd : '@fastify/formbody @fastify/cors @fastify/static dotenv fastify fastify-jwt fs @fastify/jwt mongoose @fastify/multipart'
+};
+export default mongo;

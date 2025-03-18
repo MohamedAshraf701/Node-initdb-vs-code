@@ -1,6 +1,6 @@
-const addModule= {
+const addModule = {
     folders: ['Controllers', 'Routes', 'Models'],
-    mfiles:(name:any) =>{
+    mfiles:(name: any) =>{
         return [{folder: 'Models', name: `${name}.Model.js`, content:
             `
 const mongoose = require('mongoose');
@@ -142,7 +142,6 @@ module.exports = {
       return;
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
       return;
     }
   },
@@ -159,7 +158,7 @@ module.exports = {
         return;
       } else {
         let page = req.query.page || 1
-        let limit = 10
+        let limit = req.query.limit || 10
         const skip = (page - 1) * limit
         const result = await ${name}Model.find().skip(skip).limit(limit);
         const totalItem = await ${name}Model.countDocuments()
@@ -170,7 +169,6 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
       return;
     }
   },
@@ -191,7 +189,7 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   },
 
@@ -211,7 +209,7 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   }
 }
@@ -241,12 +239,12 @@ module.exports = router;
               ` },
       
       
-      ]
+      ];
     },
-    sfiles:(name:any) =>{
+    sfiles:(name: any) =>{
       return [{folder: 'Models', name: `${name}.Model.js`, content:`
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/dbConfig'); // Update the path as necessary
+const { sequelize } = require('../config/dbConfig'); // Update the path as necessary
 
 const ${name}Model = sequelize.define('${name}Model', {
     // String field with required validation, minimum length, maximum length, and default value
@@ -354,17 +352,6 @@ const ${name}Model = sequelize.define('${name}Model', {
     timestamps: true
 });
 
-// Add index on emailField for uniqueness
-${name}Model.addIndex({
-    fields: ['emailField'],
-    unique: true
-});
-
-// Middleware ${name} (beforeCreate hook for validation)
-${name}Model.beforeCreate((${name}, options) => {
-    console.log('Creating document...');
-});
-
 module.exports = ${name}Model;
       `},
     {
@@ -384,7 +371,7 @@ module.exports = {
       ResponseHandler.sendSuccess(res, result, Codes.CREATED, Messages.DATA_CREATED_SUCCESS);
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   },
 
@@ -399,7 +386,7 @@ module.exports = {
         ResponseHandler.sendSuccess(res, result, Codes.OK, Messages.DATA_RETRIEVED_SUCCESS);
       } else {
         let page = req.query.page || 1;
-        let limit = 10;
+        let limit = req.query.limit || 10
         const offset = (page - 1) * limit;
         const result = await ${name}Model.findAll({ offset, limit });
         const totalItem = await ${name}Model.count();
@@ -409,7 +396,7 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   },
 
@@ -430,7 +417,7 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   },
 
@@ -448,7 +435,7 @@ module.exports = {
       }
     } catch (error) {
       ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-      next(error);
+      return;
     }
   }
 }
@@ -476,8 +463,9 @@ router.delete("/" ,${name}Controller.delete${name});
 // Exporting the router instance to be used in other parts of the application
 module.exports = router;
           ` }
-    ]
+    ];
     }
 
-}
+};
+
 export default addModule;

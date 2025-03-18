@@ -1,6 +1,6 @@
-const sequelize = {
-    folders: ['config','Controllers', 'Routes', 'Models', 'uploads', 'Utils'],
-    files: (index : any) =>{return [
+const mongo = {
+    folders: ['config','Controllers', 'Routes', 'Models', 'uploads', 'Middleware' , 'Utils'],
+    files:(index: any, Projectname: any) =>{return  [
         {
             folder: 'Controllers',
             name: 'health.Controller.js',
@@ -21,8 +21,8 @@ const sequelize = {
           } catch (error) {
               // Handle any errors that occur during the process by sending an error response
               ResponseHandler.sendError(res, error, Codes.INTERNAL_SERVER_ERROR, Messages.INTERNAL_SERVER_ERROR);
-              next(error); // Pass the error to the next middleware for further handling
-          }
+              return;
+         }
       }
   }
                 ` },
@@ -47,33 +47,127 @@ module.exports = router;
                 ` },
         {
             folder: 'Models',
-            name: 'user.Model.js',
+            name: 'example.Model.js',
             content:
                 `
-const { DataTypes } = require('sequelize'); // Importing DataTypes from sequelize for defining model attributes
-const { sequelize } = require('../config/dbConfig'); // Importing sequelize instance from dbConfig
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-// Defining the User model with its structure and rules
-const User = sequelize.define('User', {
-  username: {
-    type: DataTypes.STRING, // Specifies the data type of username as string
-    allowNull: false, // Makes the username field non-nullable
+// Define the schema
+const ExampleSchema = new Schema({
+  // String field with required validation, minimum length, maximum length, and default value
+  stringField: {
+    type: String,
+    required: [true, 'String field is required'], // Field is required
+    minlength: [5, 'String field must be at least 5 characters long'], // Minimum length constraint
+    maxlength: [50, 'String field must be less than 50 characters long'], // Maximum length constraint
+    default: 'Default String' // Default value if not provided
   },
-  email: {
-    type: DataTypes.STRING, // Specifies the data type of email as string
-    allowNull: false, // Makes the email field non-nullable
-    unique: true, // Ensures email values are unique across the table
+  // Number field with required validation, minimum value, maximum value, and default value
+  numberField: {
+    type: Number,
+    required: [true, 'Number field is required'], // Field is required
+    min: [0, 'Number field must be at least 0'], // Minimum value constraint
+    max: [100, 'Number field must be less than or equal to 100'], // Maximum value constraint
+    default: 42 // Default value if not provided
   },
-  password: {
-    type: DataTypes.STRING, // Specifies the data type of password as string
-    allowNull: false, // Makes the password field non-nullable
+  // Date field with default value set to current date and time
+  dateField: {
+    type: Date,
+    default: Date.now // Default value set to current date and time
   },
+  // Buffer field for storing binary data (no specific validation or default value provided here)
+  bufferField: Buffer,
+  // Boolean field with default value
+  booleanField: {
+    type: Boolean,
+    default: false // Default value if not provided
+  },
+  // Mixed field that can hold any type of value, with an empty object as default
+  mixedField: {
+    type: Schema.Types.Mixed,
+    default: {} // Default value is an empty object
+  },
+  // ObjectId field for referencing another document (self-referencing for example)
+  objectIdField: {
+    type: Schema.Types.ObjectId,
+    ref: 'ExampleModel' // Reference to self (example purposes only)
+  },
+  // Array field containing strings, with default values
+  arrayField: {
+    type: [String],
+    default: ['defaultItem1', 'defaultItem2'] // Default array with two items
+  },
+  // Decimal128 field for high-precision decimal values
+  decimal128Field: {
+    type: Schema.Types.Decimal128,
+    default: 0.0 // Default value is 0.0
+  },
+  // Map field for storing key-value pairs of strings
+  mapField: {
+    type: Map,
+    of: String,
+    default: new Map([['key1', 'value1'], ['key2', 'value2']]) // Default map with key-value pairs
+  },
+  // Nested object with fields containing default values
+  nestedObject: {
+    nestedString: {
+      type: String,
+      default: 'Nested Default String' // Default value for nestedString
+    },
+    nestedNumber: {
+      type: Number,
+      default: 10 // Default value for nestedNumber
+    }
+  },
+  // List of lists containing nested arrays of numbers with default values
+  listOfLists: {
+    type: [[Number]],
+    default: [[1, 2, 3], [4, 5, 6]] // Default list of lists with nested numbers
+  },
+  // List of objects with subfields and default values
+  listOfObjects: {
+    type: [{
+      subField1: {
+        type: String,
+        default: 'SubField Default' // Default value for subField1
+      },
+      subField2: {
+        type: Number,
+        default: 100 // Default value for subField2
+      }
+    }],
+    default: [{ subField1: 'Default1', subField2: 100 }, { subField1: 'Default2', subField2: 200 }] // Default array of objects
+  },
+  // Email field with validation for format, uniqueness, and trimming
+  emailField: {
+    type: String,
+    required: [true, 'Email is required'], // Field is required
+    unique: true, // Ensure uniqueness
+    lowercase: true, // Convert to lowercase
+    trim: true, // Trim whitespace
+    match: [/\S+@\S+\.\S+/, 'Invalid email address'] // Validate format using regex
+  }
 }, {
-  // options - Additional model configuration options can be specified here
+  timestamps: true, // Add createdAt and updatedAt timestamps
+  versionKey: false // Disable versioning
 });
 
-module.exports = User; // Exporting the User model for use in other parts of the application
-                
+// Add index on emailField for uniqueness
+ExampleSchema.index({ emailField: 1 }, { unique: true });
+
+// Middleware example (pre-save hook for validation)
+ExampleSchema.pre('save', function(next) {
+  // Add custom logic before saving
+  console.log('Saving document...');
+  next();
+});
+
+// Create the model based on the schema
+const ExampleModel = mongoose.model('ExampleModel', ExampleSchema);
+
+// Export the model for use in other parts of the application
+module.exports = ExampleModel;
                 
         ` },
         { folder: 'uploads', name: 'dummy', content: '// Dummy file' },
@@ -180,7 +274,11 @@ const Messages = {
   TOO_MANY_REQUESTS: "The user has sent too many requests in a given amount of time ('rate limiting')",
   REQUEST_HEADER_FIELDS_TOO_LARGE: "The server is unwilling to process the request because its header fields are too large",
   UNAVAILABLE_FOR_LEGAL_REASONS: "The server is denying access to the resource as a consequence of a legal demand",
-  INTERNAL_SERVER_ERROR: "Internal server error occurred."
+  INTERNAL_SERVER_ERROR: "Internal server error occurred.",
+  DATA_RETRIEVED_SUCCESS: "Data retrieved successfully",
+  DATA_CREATED_SUCCESS: "Data created successfully",
+  DATA_UPDATED_SUCCESS: "Data updated successfully",
+  DATA_DELETED_SUCCESS: "Data deleted successfully"
 };
 
 module.exports = { Codes, Messages };                             
@@ -260,12 +358,12 @@ module.exports = {
             `
         },
         {
-            folder : 'Utils', name : 'jwtToken.js', content :
+            folder : 'Middleware', name : 'jwtToken.js', content :
             `'use strict'
 // jwtHelper.js
 const jwt = require('jsonwebtoken');
-const ResponseHandler = require('./responseHandler');
-const { Codes, Messages } = require('./httpCodesAndMessages');
+const ResponseHandler = require('../Utils/responseHandler');
+const { Codes, Messages } = require('../Utils/httpCodesAndMessages');
 
 // Secret key for signing tokens
 const SECRET_KEY = process.env.JWT_SECRET || 'X~7W@**TsZ=@}XT/"Z<bo7oDY8gtD(';
@@ -334,9 +432,31 @@ module.exports = JWTHelper;
         {
             folder: 'Utils', name: 'responseHandler.js', content:
                 `
+/**
+ * This module provides a utility class for handling HTTP responses in a standardized way.
+ * It includes methods for sending success and error responses with customizable status codes and messages.
+ * 
+ * @module ResponseHandler
+ */
 const { Codes, Messages } = require('./httpCodesAndMessages');
+
+/**
+ * Represents a utility class for handling HTTP responses.
+ * 
+ * @class ResponseHandler
+ */
 class ResponseHandler {
+  /**
+     * Sends a successful HTTP response.
+     * 
+     * @param {Response} res - The Express response object.
+     * @param {*} data - The data to be sent in the response.
+     * @param {number} [statusCode=Codes.OK] - The HTTP status code for the response.
+     * @param {string} [message=Messages.OK] - The message to be sent in the response.
+     */
     static sendSuccess(res, data, statusCode = Codes.OK , message = Messages.OK) {
+        if(res.headersSent) return;     
+
         res.status(statusCode).json({
             success: true,
             status: statusCode,
@@ -345,7 +465,17 @@ class ResponseHandler {
         });
     }
 
+  /**
+    * Sends an error HTTP response.
+    * 
+    * @param {Response} res - The Express response object.
+    * @param {*} error - The error to be sent in the response.
+    * @param {number} [statusCode=Codes.INTERNAL_SERVER_ERROR] - The HTTP status code for the response.
+    * @param {string} [message=Messages.INTERNAL_SERVER_ERROR] - The message to be sent in the response.
+  */
     static sendError(res, error, statusCode = Codes.INTERNAL_SERVER_ERROR , message = Messages.INTERNAL_SERVER_ERROR) {
+        if(res.headersSent) return;
+
         res.status(statusCode).json({
             success: false,
             status: statusCode,
@@ -356,53 +486,47 @@ class ResponseHandler {
 }
 
 module.exports = ResponseHandler;
-                
 ` },
         {
             folder: '', name: index, content:
                 `
-// Importing necessary modules
-const express = require("express"); // Express framework for handling server-side logic
-const createError = require("http-errors"); // Utility to create HTTP errors
-const dotenv = require("dotenv").config(); // Loads environment variables from a .env file into process.env
-const cors = require('cors'); // Middleware to enable CORS (Cross-Origin Resource Sharing)
-const bodyParser = require("body-parser"); // Middleware to parse incoming request bodies
+const express = require("express"); // Importing express module for server operations
+const createError = require("http-errors"); // Importing module to create HTTP errors
+const dotenv = require("dotenv").config(); // Loading environment variables from .env file
+const cors = require('cors'); // Importing CORS middleware to enable cross-origin requests
+const bodyParser = require("body-parser"); // Importing body-parser middleware to parse request bodies
 const app = express(); // Creating an instance of express
 
-const fs = require('fs'); // File system module to handle file operations
-app.use(cors()); // Applying CORS middleware to allow cross-origin requests
+const fs = require('fs'); // Importing file system module for file operations
+app.use(cors()); // Using CORS middleware in the app
 app.use(express.json()); // Middleware to parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
-app.use(bodyParser.json()); // Middleware to parse JSON bodies (redundant with express.json())
+app.use(bodyParser.json()); // Middleware to parse JSON bodies using body-parser
 
 const apiV1Router = express.Router(); // Creating a new router for API version 1
 
-// Database initialization
-const { connectDB } = require("./config/dbConfig"); // Importing DB connection function
-connectDB(); // Connecting to the database
+// Initialize DB
+require("./config/dbConfig")(); // Importing and executing the database configuration
 
-// Model initialization
-const { initModels } = require("./config/initModels"); // Importing model initialization function
-initModels(); // Initializing models
-
-// Middleware to log requests
+// Middleware to log request details after response is sent
 app.use((req, res, next) => {
   res.on("finish", () => {
-      console.log(req.method + " - " + req.originalUrl + " - " + res.statusCode); // Logging method, URL, and status code of each request
+      console.log(req.method + " - " + req.originalUrl + " - " + res.statusCode);
   });
-  next(); // Passing control to the next middleware function
+  next();
 });
 
-// Route files
-const RoutesHealth = require("./Routes/health.Route"); // Importing health check routes
+apiV1Router.use('/uploads', express.static('uploads')); // Serving static files from 'uploads' directory
 
-// API V1 Routes
-apiV1Router.use('/uploads', express.static('uploads')); // Serving static files from the uploads directory
-apiV1Router.use("/health", RoutesHealth); // Using health routes in the API
+// Importing route for health checks
+const RoutesHealth = require("./Routes/health.Route");
+
+// Registering health check route with API v1 router
+apiV1Router.use("/health", RoutesHealth);
 
 // Middleware to handle 404 Not Found error for API v1 routes
 apiV1Router.use((req, res, next) => {
-    next(createError(404, "Not found")); // Creating a 404 error if no other route matches
+    next(createError(404, "Not found"));
 });
 
 // Custom error handler middleware for API v1 routes
@@ -413,26 +537,28 @@ apiV1Router.use((err, req, res, next) => {
             status: err.status || 500, // Error status code
             message: err.message, // Error message
         },
-    }); // Sending a JSON response with the error details
+    });
 });
 
-app.use("/api/v1" , apiV1Router); // Mounting the API v1 router at '/api/v1'
+app.use("/api/v1" , apiV1Router); // Mounting API v1 router at '/api/v1'
 
-const http = require("https"); // HTTPS module
-const PORT = process.env.PORT || 8096; // Port number from environment variable or default to 8096
+const http = require("https"); // Importing HTTPS module
+const PORT = process.env.PORT || 8096; // Setting port from environment variable or default to 8096
 // Check if HTTPS is enabled via environment variable
 if (process.env.IS_HTTPS == "true") {
     const privateKey = fs.readFileSync(process.env.KEYPATH, 'utf8'); // Reading private key for HTTPS
     const certificate = fs.readFileSync(process.env.CARTPATH, 'utf8'); // Reading certificate for HTTPS
     const credentials = { key: privateKey, cert: certificate }; // Creating credentials object
     
-    let server = http.createServer(credentials, app); // Creating HTTPS server with credentials and express app
+    // Creating and starting HTTPS server
+    let server = http.createServer(credentials, app);
     server.listen(PORT, () => {
-        console.log('HTTPS Server started on port :' ,PORT); // Logging HTTPS server start
+        console.log('HTTPS Server started on port :' ,PORT);
     });
 } else {
+    // Starting HTTP server if HTTPS is not enabled
     app.listen(PORT, () => {
-        console.log('HTTP Server started on port :' ,PORT); // Logging HTTP server start
+        console.log('HTTP Server started on port :' ,PORT);
     });
 }
                 ` },
@@ -440,51 +566,203 @@ if (process.env.IS_HTTPS == "true") {
             folder: 'config', name: 'dbConfig.js',
             content:
                 `
-// Importing Sequelize constructor from the sequelize package.
-const { Sequelize } = require('sequelize');
+const mongoose = require('mongoose');
 
-// Creating an instance of Sequelize to connect to our MySQL database using environment variables.
-let sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
-  host: process.env.DB_HOST, // Database host URL
-  dialect: 'mysql', // Database dialect
+// This module exports a function that sets up the MongoDB connection using Mongoose.
+module.exports = () => {
+  // Connect to MongoDB using the connection string and credentials from environment variables.
+  mongoose
+    .connect(process.env.MONGODB_URI, {
+      dbName: process.env.DB_NAME, // Name of the database to connect to.
+      user: process.env.DB_USER,   // Database user's name.
+      pass: process.env.DB_PASS,   // Database user's password.
+      useNewUrlParser: true,       // Use the new URL parser for MongoDB connection strings.
+      useUnifiedTopology: true,    // Use the new engine for MongoDB driver's topology management.
+    })
+    .then(() => {
+      console.log('Mongodb connected....') // Log on successful connection.
+    })
+    .catch(err => console.log(err.message)); // Log any errors that occur during connection.
+
+  // Event listener for successful connection to the database.
+  mongoose.connection.on('connected', () => {
+    console.log('Mongoose connected to db...');
+  });
+
+  // Event listener for any connection errors.
+  mongoose.connection.on('error', err => {
+    console.log(err.message); // Log the error message.
+  });
+
+  // Event listener for when the connection is disconnected.
+  mongoose.connection.on('disconnected', () => {
+    console.log('Mongoose connection is disconnected...');
+  });
+
+  // Event listener for SIGINT signal (typically sent from the terminal).
+  // This is used to handle graceful shutdown of the application.
+  process.on('SIGINT', () => {
+    mongoose.connection.close(() => { // Close the MongoDB connection.
+      console.log(
+        'Mongoose connection is disconnected due to app termination...'
+      );
+      process.exit(0); // Exit the process after the connection is closed.
+    });
+  });
+};
+                ` },
+        {
+            folder: 'Middleware', name: 'fileUpload.js',
+            content:
+                `
+/**
+ * @fileoverview This module sets up and exports a configured Multer instance 
+ * for handling file uploads in a Node.js application. It includes:
+ * - Storage configuration for saving uploaded files.
+ * - File filtering to allow only image uploads.
+ * - File size limit enforcement.
+ */
+
+const multer = require("multer"); // Importing multer for handling file uploads
+
+// Configure storage settings for multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, "uploads/"); // Set upload destination folder
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + "-" + file.originalname); // Rename file with timestamp to avoid conflicts
+    }
 });
 
-// Asynchronous function to establish a connection to the database and synchronize the models.
-const connectDB = async () => {
-  try {
-    // Synchronizes all defined models to the database.
-    // 'alter: false' ensures the database should not be altered.
-    await sequelize.sync({ alter: false });
-    console.log('Connection has been established successfully.'); // Success message
-  } catch (error) {
-    console.error('Unable to connect to the database:', error); // Error handling
-  }
+// Define a filter to allow only image files
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+        cb(null, true); // Accept the file
+    } else {
+        cb(new Error("Only images are allowed!"), false); // Reject non-image files
+    }
 };
 
-// Exporting the sequelize instance and connectDB function to be used in other parts of the application.
-module.exports = { sequelize, connectDB };
-                
-                ` },{ folder: 'config', name: 'initModels.js',
-                content:`
-const initModels = () => {
-    // Associate models here if necessary
-    // e.g., User.hasMany(Posts);
-};
+// Configure multer with storage, file filtering, and size limits
+const upload = multer({
+    storage, // Use defined storage settings
+    fileFilter, // Apply file type filter
+    limits: { fileSize: 2 * 1024 * 1024 } // Limit file size to 2MB
+});
 
-module.exports = { initModels };
-                `},
-        {
-            folder: '', name: '.env', content:
-                `PORT=3000
-DB_HOST=localhost
+module.exports = upload; // Export configured multer instance
+
+
+                ` },
+                {
+                  folder: '', name: '.env', content:
+                      `PORT=3000
+MONGODB_URI=mongodb://localhost:27017/
 DB_NAME=test
 DB_USER=
 DB_PASS=
 IS_HTTPS=false
 KEYPATH=
 CARTPATH=
-JWT_SECRET=` } // Empty .env file
-    ]},
-    cmd : 'npm install body-parser cors dotenv express fs http-errors https jsonwebtoken sequelize mysql2 multer'
-}
-export default sequelize;
+JWT_SECRET=` } ,
+{
+  folder: '', name: '.gitignore', content:
+      `node_modules
+package-lock.json
+.env
+` 
+} ,
+      {
+        folder: '', name: 'README.md', content:
+`
+# *${Projectname}*
+
+This project was generated using node-initdb, a CLI tool for initializing database configurations, web framework setups, and project structures in Node.js projects. *This setup requires you to choose one option from each category: a database, a web framework, a language, and a package manager.*
+
+## Features
+
+- Preconfigured folder structure for streamlined project development.
+- *Database Support:* Choose between MongoDB (via Mongoose) or Sequelize (MySQL).
+- *Web Framework:* Set up with Express, Fastify, or Elysia.
+- *Language Choice:* Develop in JavaScript or TypeScript.
+- *Package Manager:* Use npm, yarn, pnpm, or bun.
+- Integrated file upload functionality.
+- Pre-configured JWT-based authentication.
+- Automatically installs required dependencies based on your selected configuration.
+
+## Folder Structure
+
+The following structure was generated:
+
+
+- config/
+- Controllers/
+- Routes/
+- Models/
+- Middleware/
+- uploads/
+- Utils/
+
+
+## Getting Started
+
+### Setup Project
+
+Use the 'node-initdb' command to create the project. *You must select one option from each category:*
+
+- *Database:*
+  - MongoDB: '-m' or '--mongo'
+  - Sequelize: '-s' or '--seque'
+- *Web Framework:*
+  - Express: '-e' or '--express'
+  - Fastify: '-f' or '--fastify'
+  - Elysia: '-el' or '--elysia'
+- *Language:*
+  - JavaScript: '-j' or '--javascript'
+  - TypeScript: '-t' or '--typescript'
+- *Package Manager:*
+  - npm: '-n' or '--npm'
+  - yarn: '-ya' or '--yarn'
+  - pnpm: '-pn' or '--pnpm'
+  - bun: '-b' or '--bun'
+
+Optionally, add '-y' or '--yes' to skip interactive prompts and use default values.
+
+For example, to set up a project with MongoDB, Express, TypeScript, and npm:
+
+bash
+node-initdb -m -e -t -n
+
+
+### Adding a Module
+
+To add a new module to your project, use the 'node-add' command with the same required options:
+
+bash
+node-add <moduleName> [-m / --mongo] [-s / --seque] [-e / --express] [-f / --fastify] [-el / --elysia] [-j / --javascript] [-t / --typescript] [-n / --npm] [-ya / --yarn] [-pn / --pnpm] [-b / --bun]
+
+
+For example, to add a "user" module for MongoDB, Express, TypeScript, and yarn:
+
+bash
+node-add user -m -e -t
+
+
+## About node-initdb
+
+node-initdb is designed to simplify the setup of database-driven projects by generating a preconfigured folder structure and installing required dependencies based on your chosen database, web framework, language, and package manager.
+
+For more information, visit:
+- GitHub: [@MohamedAshraf701](https://github.com/MohamedAshraf701)
+
+---
+
+If you encounter any issues, feel free to reach out at ashrafchauhan567@gmail.com or open an issue on GitHub.
+
+            ` } // Empty .env file
+    ];
+  },
+    cmd : 'body-parser cors dotenv express fs http-errors https jsonwebtoken mongoose multer'
+};
+export default mongo;
