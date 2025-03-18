@@ -3,3 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+config.bat
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
